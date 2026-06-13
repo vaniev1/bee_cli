@@ -3,6 +3,7 @@
 Календарный агент исключён (macOS-only).
 """
 import json
+import os
 import re
 
 ROUTER_SYSTEM_PROMPT = """You are the intent router of a local assistant called Bee. \
@@ -55,14 +56,21 @@ def _router_input(message: str, history: list[dict]) -> str:
 
 
 def route(worker, message: str, history: list[dict]):
-    """Возвращает (agent, query, think). При сбое — fallback по ключевым словам."""
+    """Возвращает (agent, query, think). При сбое — fallback по ключевым словам.
+
+    BEE_LLM_ROUTER=0 — полностью пропустить вызов модели-роутера (он на слабом
+    CPU — главный источник задержки: длинный системный промпт + генерация JSON).
+    Тогда роутинг идёт только по ключевым словам, а размышления решает эвристика.
+    """
+    if os.environ.get("BEE_LLM_ROUTER") == "0":
+        return route_by_keywords(message)
     try:
         raw = worker.complete(
             [
                 {"role": "system", "content": ROUTER_SYSTEM_PROMPT},
                 {"role": "user", "content": _router_input(message, history)},
             ],
-            max_tokens=96,
+            max_tokens=64,
             temperature=0.0,
         )
         data = json.loads(re.search(r"\{.*\}", raw, re.DOTALL).group(0))
