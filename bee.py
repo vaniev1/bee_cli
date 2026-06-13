@@ -33,7 +33,7 @@ def _cfg(name, default):
     return os.environ.get(name, default)
 
 
-def bench(worker, time_agent, search_agent, llm_pid, config):
+def bench(worker, time_agent, search_agent, llm_pid, config, max_tokens, think_budget):
     """Прогон фиксированных промптов: метрики, JSON с железом и HTML-отчёт."""
     path = os.path.join(ROOT, "bench_prompts.json")
     with open(path, encoding="utf-8") as f:
@@ -46,7 +46,8 @@ def bench(worker, time_agent, search_agent, llm_pid, config):
         ui.line(f"[{i}/{len(prompts)}] {p['label']}", style="dim")
         labels.append(p["label"])
         metric = None
-        for kind, val in run_turn(worker, time_agent, search_agent, p["message"], [], llm_pid):
+        for kind, val in run_turn(worker, time_agent, search_agent, p["message"], [], llm_pid,
+                                  max_tokens=max_tokens, think_budget=think_budget):
             if kind == "metrics":
                 session.add(val)
                 metric = val
@@ -74,7 +75,7 @@ def bench(worker, time_agent, search_agent, llm_pid, config):
     ui.line(f"📊 Отчёт:   {html_path}  ← скачай и открой в браузере", style="dim")
 
 
-def repl(worker, time_agent, search_agent, llm_pid):
+def repl(worker, time_agent, search_agent, llm_pid, max_tokens, think_budget):
     session = Session()
     history = []
     while True:
@@ -101,7 +102,8 @@ def repl(worker, time_agent, search_agent, llm_pid):
             ui.line("Команды: /stats · /reset · /help · /quit. Просто пиши сообщение для чата.", style="dim")
             continue
 
-        events = run_turn(worker, time_agent, search_agent, text, history, llm_pid)
+        events = run_turn(worker, time_agent, search_agent, text, history, llm_pid,
+                          max_tokens=max_tokens, think_budget=think_budget)
         answer = ui.render_turn(events, session.add)
         if answer:
             history.append({"role": "user", "content": text})
@@ -114,6 +116,9 @@ def main():
     ap.add_argument("--llm-url", help="подключиться к запущенному llama-server (не спавнить свой)")
     ap.add_argument("--ctx", type=int, default=int(_cfg("BEE_CTX", "8192")))
     ap.add_argument("--threads", type=int, default=int(_cfg("BEE_THREADS", str(os.cpu_count() or 1))))
+    ap.add_argument("--max-tokens", type=int, default=int(_cfg("BEE_MAX_TOKENS", "2048")),
+                    help="лимит токенов ответа (на слабом CPU ставь 96–128)")
+    ap.add_argument("--think-budget", type=int, default=int(_cfg("BEE_THINK_BUDGET", "600")))
     args = ap.parse_args()
 
     llama = None
@@ -157,9 +162,9 @@ def main():
     config = {"model": os.path.basename(info[1]), "ctx": args.ctx, "threads": args.threads}
     try:
         if args.mode == "bench":
-            bench(worker, time_agent, search_agent, llm_pid, config)
+            bench(worker, time_agent, search_agent, llm_pid, config, args.max_tokens, args.think_budget)
         else:
-            repl(worker, time_agent, search_agent, llm_pid)
+            repl(worker, time_agent, search_agent, llm_pid, args.max_tokens, args.think_budget)
     finally:
         worker.close()
         if llama:

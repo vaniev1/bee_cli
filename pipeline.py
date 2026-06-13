@@ -57,7 +57,8 @@ def _format_results_for_llm(results):
     )
 
 
-def run_turn(worker, time_agent, search_agent, message, history, llm_pid=None):
+def run_turn(worker, time_agent, search_agent, message, history, llm_pid=None,
+             max_tokens=2048, think_budget=600):
     history = normalize_history(history)
     m = TurnMetrics()
 
@@ -75,7 +76,8 @@ def run_turn(worker, time_agent, search_agent, message, history, llm_pid=None):
     def stream_llm(messages, thinking):
         nonlocal char_count, first_token_at
         m.llm_used = True
-        for kind, val in worker.stream(messages, thinking=thinking):
+        for kind, val in worker.stream(messages, thinking=thinking,
+                                       max_tokens=max_tokens, think_budget=think_budget):
             if kind == "timings":
                 m.add_timings(val)
                 continue
