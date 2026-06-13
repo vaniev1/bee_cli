@@ -67,6 +67,9 @@ class LlamaServer:
             "--ctx-size", str(self.ctx),
             "-t", str(self.threads),
             "--jinja",
+            "-fa",           # flash attention — меньше операций с памятью
+            "-ctk", "q8_0",  # KV-кеш q8: вдвое меньше RAM и bandwidth
+            "-ctv", "q8_0",
         ]
         if self.template:
             cmd += ["--chat-template-file", self.template]
@@ -74,7 +77,9 @@ class LlamaServer:
 
     def start(self):
         log = open(self.log_path, "w") if self.log_path else subprocess.DEVNULL
-        self.proc = subprocess.Popen(self._cmd(), stdout=log, stderr=log)
+        # nice -n 10: не душим хост при пиковой нагрузке
+        cmd = ["nice", "-n", "10"] + self._cmd()
+        self.proc = subprocess.Popen(cmd, stdout=log, stderr=log)
 
     def wait_healthy(self, timeout=300.0) -> bool:
         deadline = time.time() + timeout

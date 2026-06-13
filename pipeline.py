@@ -112,7 +112,7 @@ def run_turn(worker, time_agent, search_agent, message, history, llm_pid=None,
                         *history,
                         {"role": "user", "content": message},
                     ]
-                    yield from stream_llm(messages, thinking=True)
+                    yield from stream_llm(messages, thinking=False)
 
             else:  # chat
                 messages = [

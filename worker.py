@@ -186,6 +186,7 @@ class BeeWorker:
         if not thinking:
             payload = self._payload(messages, max_tokens, temperature, False)
             payload["stream"] = True
+            payload["cache_prompt"] = True
             parser = ThinkTagParser()
             with self.client.stream("POST", f"{self.base_url}/v1/chat/completions", json=payload) as resp:
                 resp.raise_for_status()

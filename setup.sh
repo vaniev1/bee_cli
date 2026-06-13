@@ -27,6 +27,7 @@ cmake -S "$ROOT/vendor/llama.cpp" -B "$ROOT/vendor/llama.cpp/build" \
   -DCMAKE_BUILD_TYPE=Release \
   -DLLAMA_CURL=OFF \
   -DGGML_NATIVE=ON \
+  -DGGML_OPENMP=ON \
   -DLLAMA_BUILD_TESTS=OFF \
   -DLLAMA_BUILD_EXAMPLES=OFF
 cmake --build "$ROOT/vendor/llama.cpp/build" --config Release --target llama-server -j "$NPROC"

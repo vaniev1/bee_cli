@@ -114,7 +114,7 @@ def main():
     ap = argparse.ArgumentParser(prog="bee", description="Bee CLI — локальный ассистент со сбором метрик")
     ap.add_argument("mode", nargs="?", default="chat", choices=["chat", "bench"])
     ap.add_argument("--llm-url", help="подключиться к запущенному llama-server (не спавнить свой)")
-    ap.add_argument("--ctx", type=int, default=int(_cfg("BEE_CTX", "8192")))
+    ap.add_argument("--ctx", type=int, default=int(_cfg("BEE_CTX", "4096")))
     ap.add_argument("--threads", type=int, default=int(_cfg("BEE_THREADS", str(os.cpu_count() or 1))))
     ap.add_argument("--max-tokens", type=int, default=int(_cfg("BEE_MAX_TOKENS", "2048")),
                     help="лимит токенов ответа (на слабом CPU ставь 96–128)")
