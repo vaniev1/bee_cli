@@ -1,0 +1,9 @@
+.venv/
+vendor/
+models/
+__pycache__/
+*.pyc
+*.log
+bench_result.json
+report.html
+.claude/
