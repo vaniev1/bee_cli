@@ -21,7 +21,7 @@ import time
 import agents
 import report
 import ui
-from llama import LlamaServer, find_llama_pid
+from llama import LlamaServer, default_binary, find_llama_pid
 from metrics import Session, system_info
 from pipeline import run_turn
 from worker import BeeWorker
@@ -132,11 +132,12 @@ def main():
         llm_pid = find_llama_pid()
         info = (args.llm_url, "внешний")
     else:
-        binary = _cfg("BEE_LLAMA_SERVER", os.path.join(ROOT, "vendor/llama.cpp/build/bin/llama-server"))
-        model = _cfg("BEE_MODEL", os.path.join(ROOT, "models/Bonsai-8B-Q1_0.gguf"))
+        binary = _cfg("BEE_LLAMA_SERVER", default_binary(ROOT))
+        model = _cfg("BEE_MODEL", os.path.join(ROOT, "models", "Bonsai-8B-Q1_0.gguf"))
+        setup_hint = ".\\setup.ps1" if os.name == "nt" else "./setup.sh"
         for label, path in [("llama-server", binary), ("модель", model)]:
             if not os.path.exists(path):
-                ui.line(f"⚠️ Не найден {label}: {path}\n   Запусти ./setup.sh или задай env BEE_*", style="bold red")
+                ui.line(f"⚠️ Не найден {label}: {path}\n   Запусти {setup_hint} или задай env BEE_*", style="bold red")
                 sys.exit(1)
         llama = LlamaServer(
             binary=binary, model=model, ctx=args.ctx, threads=args.threads,

@@ -5,13 +5,27 @@ tok/s берём из timings самого llama-server (точно, без се
 """
 import os
 import platform
+import subprocess
 import threading
 import time
 from dataclasses import dataclass, field
 
 
+def _sysctl(key: str):
+    """Значение sysctl (macOS). None, если недоступно."""
+    try:
+        out = subprocess.run(["sysctl", "-n", key], capture_output=True,
+                             text=True, timeout=2)
+        return out.stdout.strip() or None
+    except Exception:
+        return None
+
+
 def system_info() -> dict:
-    """Железо, на котором снимаются метрики (для шапки отчёта)."""
+    """Железо, на котором снимаются метрики (для шапки отчёта).
+
+    Linux читает /proc и /sys без зависимостей; macOS — через sysctl;
+    Windows и любые пробелы добиваем через psutil (если установлен)."""
     info = {
         "os": platform.platform(),
         "python": platform.python_version(),
@@ -20,6 +34,7 @@ def system_info() -> dict:
         "ram_gb": None,
         "freq_mhz": None,
     }
+    # Linux: /proc, /sys
     try:
         with open("/proc/cpuinfo") as f:
             for line in f:
@@ -40,6 +55,25 @@ def system_info() -> dict:
         with open("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq") as f:
             info["freq_mhz"] = round(int(f.read().strip()) / 1000)
     except OSError:
+        pass
+
+    # macOS: sysctl
+    if platform.system() == "Darwin":
+        info["cpu"] = _sysctl("machdep.cpu.brand_string") or info["cpu"]
+        mem = _sysctl("hw.memsize")
+        if mem:
+            info["ram_gb"] = round(int(mem) / 1024 ** 3, 1)
+
+    # Кроссплатформенный fallback (в т.ч. Windows): RAM и частота через psutil
+    try:
+        import psutil
+        if info["ram_gb"] is None:
+            info["ram_gb"] = round(psutil.virtual_memory().total / 1024 ** 3, 1)
+        if info["freq_mhz"] is None:
+            freq = psutil.cpu_freq()
+            if freq and freq.max:
+                info["freq_mhz"] = round(freq.max)
+    except Exception:
         pass
     return info
 
